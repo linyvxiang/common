@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <queue>
 #include <functional>
+#include <atomic>
 
 #include <boost/context/all.hpp>
 
@@ -30,7 +31,11 @@ typedef void (*UserFunc)(void*);
 struct CoTask {
     CoTask() {}
     CoTask(UserFunc user_fn, void* user_arg) :
-        fn(user_fn), arg(user_arg), stack(NULL), stack_size(0), id(-1) {}
+        fn(user_fn), arg(user_arg), stack(NULL),
+        stack_size(0), id(-1), stat(RUNNABLE) {}
+    ~CoTask() {
+        delete[] stack;
+    }
     void (*fn)(void*);
     void* arg;
     char* stack;
@@ -54,8 +59,6 @@ private:
     void RunMainTask();
     void YielCurrentCoTask();
     CoTask* SelectNextTask();
-    //TODO merge with RunMainTask
-    /* void RuCoTask(CoTask* task); */
     typedef std::queue<CoTask*> TaskQueue;
 
     TaskQueue task_queue_;
