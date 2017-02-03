@@ -2,8 +2,9 @@ include config.mk
 
 LIB=libcommon.a
 INC=include
-INCLUDE_PATH=-Iinclude/
-CXXFLAGS=-std=c++11 -fPIC -Wall -g
+INCLUDE_PATH=-Iinclude/ -I/home/work/test/boost/boost_1_57_0/output/include
+LIBS_PATH=-L/home/work/test/boost/boost_1_57_0/output/lib
+CXXFLAGS=-std=c++11 -fPIC -Wall -g -std=c++11
 COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard src/*.cc))
 
 .PHONY: install clean
