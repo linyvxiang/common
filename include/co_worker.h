@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <queue>
+#include <map>
 #include <functional>
 #include <atomic>
 
@@ -51,6 +52,7 @@ public:
     int64_t AddCoTask(void (*fn)(void*), void* arg);
     void RemoveCoTask(int64_t task_id);
     static void YielCoTask();
+    void ResumeCoTask(int64_t task_id);
 private:
     static void TaskWrapper(intptr_t para);
     static void PrepareStackForTask(CoTask* task);
@@ -59,9 +61,12 @@ private:
     void RunMainTask();
     void YielCurrentCoTask();
     CoTask* SelectNextTask();
-    typedef std::queue<CoTask*> TaskQueue;
+    typedef std::queue<CoTask*> RunnableTaskQueue;
+    typedef std::map<int64_t, CoTask*> YieledTaskQueue;
 
-    TaskQueue task_queue_;
+    YieledTaskQueue yieled_queue_;
+    RunnableTaskQueue runnable_queue_;
+    //TODO encode thread_id into next_task_id_
     int64_t next_task_id_;
     Mutex mu_;
     CondVar cond_;
