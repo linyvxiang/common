@@ -53,7 +53,8 @@ public:
     void RemoveCoTask(int64_t task_id);
     static void YielCoTask();
     void ResumeCoTask(int64_t task_id);
-    CoTask* GetCurCoTask();
+    inline CoTask* GetCurCoTask();
+    inline void SetCurCoTask(CoTask* task);
 private:
     static void TaskWrapper(intptr_t para);
     static void PrepareStackForTask(CoTask* task);
@@ -71,7 +72,6 @@ private:
     int64_t next_task_id_;
     Mutex mu_;
     CondVar cond_;
-    CoTask* cur_task_;
     CoTask* ended_task_;
     CoTask main_task_;
     Thread work_thread_;

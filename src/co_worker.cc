@@ -24,17 +24,21 @@ static inline void jump_context(boost::context::fcontext_t* cur_pos,
     boost::context::jump_fcontext(cur_pos, target_pos, para);
 }
 
-CoWorker::CoWorker() : next_task_id_(1), cond_(&mu_),
-                       cur_task_(NULL), ended_task_(NULL)
+CoWorker::CoWorker() : next_task_id_(1), cond_(&mu_), ended_task_(NULL)
 {
     //TODO need to be thread-safe here?
     co_worker = this;
     work_thread_.Start(std::bind(&CoWorker::RunMainTask, this));
 }
 
-CoTask* CoWorker::GetCurCoTask()
+inline CoTask* CoWorker::GetCurCoTask()
 {
     return cur_task;
+}
+
+inline void CoWorker::SetCurCoTask(CoTask* task)
+{
+    cur_task = task;
 }
 
 int64_t CoWorker::AddCoTask(UserFunc fn, void* arg)
@@ -93,12 +97,13 @@ void CoWorker::ResumeCoTask(int64_t task_id)
 
 void CoWorker::YielCurrentCoTask()
 {
-    LOG(DEBUG, "Yiel task %ld", cur_task_->id);
-    assert(cur_task_->stat == RUNNABLE);
-    cur_task_->stat = YIELD;
+    CoTask* task = GetCurCoTask();
+    LOG(DEBUG, "Yiel task %ld", task->id);
+    assert(task->stat == RUNNABLE);
+    task->stat = YIELD;
     {
         MutexLock lock(&mu_);
-        yieled_queue_[cur_task_->id] = cur_task_;
+        yieled_queue_[task->id] = task;
     }
     CoTask* next_task = SelectNextTask();
     SwitchToCoTask(next_task);
@@ -117,7 +122,7 @@ void CoWorker::RunMainTask()
                                                        TASK_STACK_SIZE,
                                                        main_task_.stack_size,
                                                        NULL);
-    cur_task_ = &main_task_;
+    SetCurCoTask(&main_task_);
 
     while (1) {
         CoTask* task = NULL;
@@ -146,9 +151,10 @@ void CoWorker::TaskWrapper(intptr_t /*para*/)
         CleanCoTask(worker->ended_task_);
     }
 
-    worker->cur_task_->fn(worker->cur_task_->arg);
+    CoTask* task = worker->GetCurCoTask();
+    task->fn(task->arg);
 
-    worker->cur_task_->stat = ENDED;
+    task->stat = ENDED;
     CoTask* next_task = worker->SelectNextTask();
     worker->SwitchToCoTask(next_task);
 }
@@ -159,10 +165,10 @@ void CoWorker::SwitchToCoTask(CoTask* task)
     if (!task->stack) {
         PrepareStackForTask(task);
     }
-    ended_task_ = cur_task_;
-    cur_task_ = task;
+    ended_task_ = GetCurCoTask();
+    SetCurCoTask(task);
     // jump to task stack
-    jump_context(&(ended_task_->context), cur_task_->context, 0);
+    jump_context(&(ended_task_->context), task->context, 0);
 }
 
 void CoWorker::PrepareStackForTask(CoTask* task)
