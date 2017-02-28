@@ -11,6 +11,7 @@ namespace baidu {
 namespace common {
 
 static CoWorker* co_worker = NULL;
+static thread_local CoTask* cur_task = NULL;
 
 CoWorker* GetCoWorker() {
     return co_worker;
@@ -25,11 +26,15 @@ static inline void jump_context(boost::context::fcontext_t* cur_pos,
 
 CoWorker::CoWorker() : next_task_id_(1), cond_(&mu_),
                        cur_task_(NULL), ended_task_(NULL)
-
 {
     //TODO need to be thread-safe here?
     co_worker = this;
     work_thread_.Start(std::bind(&CoWorker::RunMainTask, this));
+}
+
+CoTask* CoWorker::GetCurCoTask()
+{
+    return cur_task;
 }
 
 int64_t CoWorker::AddCoTask(UserFunc fn, void* arg)

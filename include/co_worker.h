@@ -53,6 +53,7 @@ public:
     void RemoveCoTask(int64_t task_id);
     static void YielCoTask();
     void ResumeCoTask(int64_t task_id);
+    CoTask* GetCurCoTask();
 private:
     static void TaskWrapper(intptr_t para);
     static void PrepareStackForTask(CoTask* task);
